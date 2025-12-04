@@ -5,193 +5,214 @@ data "aws_caller_identity" "current" {}
 
 # --- LOCALS BLOCK ---
 locals {
-  # append optional standard lifecycle rules to any rules specified by caller
-  effective_lifecycle_rules = concat(
-    var.lifecycle_rules,
-    var.noncurrent_object_expiration_days > 0 ?
-    [{
-      expiration                    = { expired_object_delete_marker = true }
-      filter                        = { prefix = "" }
-      id                            = "Expire non-current object versions"
-      noncurrent_version_expiration = { noncurrent_days = var.noncurrent_object_expiration_days }
-      status                        = "Enabled"
-    }] : [],
-    var.incomplete_multipart_expiration_days > 0 ?
-    [{
-      abort_incomplete_multipart_upload_days = var.incomplete_multipart_expiration_days
-      filter                                 = { prefix = "" }
-      id                                     = "Cleanup abandoned multipart uploads"
-      status                                 = "Enabled"
-    }] : [],
-    var.warm_tier_transition_days > 0 ?
-    [{
-      filter     = { object_size_greater_than = var.warm_tier_minimum_size }
-      id         = "Transition objects to warm tier"
-      status     = "Enabled"
-      transition = [{ days = var.warm_tier_transition_days, storage_class = var.warm_tier_storage_class }]
-    }] : [],
-    var.cold_tier_transition_days > 0 ?
-    [{
-      filter     = { object_size_greater_than = var.cold_tier_minimum_size }
-      id         = "Transition objects to cold tier"
-      status     = "Enabled"
-      transition = [{ days = var.cold_tier_transition_days, storage_class = var.cold_tier_storage_class }]
-    }] : [],
-    var.object_expiration_days > 0 ?
-    [{
-      expiration = { days = max(var.object_expiration_days, 1 + (var.warm_tier_transition_days > 0 ? var.warm_tier_transition_days + 30 : 0) + var.cold_tier_transition_days + (var.cold_tier_transition_days > 0 ? (var.cold_tier_storage_class == "GLACIER_IR" ? 90 : 180) : 0)) }
-      filter     = { prefix = "" }
-      id         = "Automatically delete objects in bucket"
-      status     = "Enabled"
-    }] : [],
-    var.temporary_object_expiration_days > 0 ?
-    [{
-      expiration = { days = var.temporary_object_expiration_days }
-      filter     = { prefix = "temporary/" }
-      id         = "Delete objects under temporary/ prefix"
-      status     = "Enabled"
-    }] : [],
-    var.temporary_object_expiration_days > 0 ?
-    [{
-      expiration = { days = var.temporary_object_expiration_days }
-      filter     = { tag = { key = "lifecycle", value = "temporary" } }
-      id         = "Delete objects tagged lifecycle=temporary"
-      status     = "Enabled"
-    }] : [],
-    var.archive_object_transition_days > 0 ?
-    [{
-      filter     = { and = { prefix = "archive/", object_size_greater_than = 131071 } }
-      id         = "Online archive objects under archive/ prefix"
-      status     = "Enabled"
-      transition = [{ days = var.archive_object_transition_days, storage_class = "GLACIER_IR" }]
-    }] : [],
-    var.archive_object_transition_days > 0 ?
-    [{
-      filter     = { and = { tags = { "lifecycle" = "archive" }, object_size_greater_than = 131071 } }
-      id         = "Online archive objects tagged lifecycle=archive"
-      status     = "Enabled"
-      transition = [{ days = var.archive_object_transition_days, storage_class = "GLACIER_IR" }]
-    }] : []
-  )
+  # (Your existing lifecycle and tagging logic remains unchanged)
+  effective_lifecycle_rules = concat(
+    var.lifecycle_rules,
+    var.noncurrent_object_expiration_days > 0 ?
+    [{
+      expiration                    = { expired_object_delete_marker = true }
+      filter                        = { prefix = "" }
+      id                            = "Expire non-current object versions"
+      noncurrent_version_expiration = { noncurrent_days = var.noncurrent_object_expiration_days }
+      status                        = "Enabled"
+    }] : [],
+    var.incomplete_multipart_expiration_days > 0 ?
+    [{
+      abort_incomplete_multipart_upload_days = var.incomplete_multipart_expiration_days
+      filter                                 = { prefix = "" }
+      id                                     = "Cleanup abandoned multipart uploads"
+      status                                 = "Enabled"
+    }] : [],
+    var.warm_tier_transition_days > 0 ?
+    [{
+      filter     = { object_size_greater_than = var.warm_tier_minimum_size }
+      id         = "Transition objects to warm tier"
+      status     = "Enabled"
+      transition = [{ days = var.warm_tier_transition_days, storage_class = var.warm_tier_storage_class }]
+    }] : [],
+    var.cold_tier_transition_days > 0 ?
+    [{
+      filter     = { object_size_greater_than = var.cold_tier_minimum_size }
+      id         = "Transition objects to cold tier"
+      status     = "Enabled"
+      transition = [{ days = var.cold_tier_transition_days, storage_class = var.cold_tier_storage_class }]
+    }] : [],
+    var.object_expiration_days > 0 ?
+    [{
+      expiration = { days = max(var.object_expiration_days, 1 + (var.warm_tier_transition_days > 0 ? var.warm_tier_transition_days + 30 : 0) + var.cold_tier_transition_days + (var.cold_tier_transition_days > 0 ? (var.cold_tier_storage_class == "GLACIER_IR" ? 90 : 180) : 0)) }
+      filter     = { prefix = "" }
+      id         = "Automatically delete objects in bucket"
+      status     = "Enabled"
+    }] : [],
+    var.temporary_object_expiration_days > 0 ?
+    [{
+      expiration = { days = var.temporary_object_expiration_days }
+      filter     = { prefix = "temporary/" }
+      id         = "Delete objects under temporary/ prefix"
+      status     = "Enabled"
+    }] : [],
+    var.temporary_object_expiration_days > 0 ?
+    [{
+      expiration = { days = var.temporary_object_expiration_days }
+      filter     = { tag = { key = "lifecycle", value = "temporary" } }
+      id         = "Delete objects tagged lifecycle=temporary"
+      status     = "Enabled"
+    }] : [],
+    var.archive_object_transition_days > 0 ?
+    [{
+      filter     = { and = { prefix = "archive/", object_size_greater_than = 131071 } }
+      id         = "Online archive objects under archive/ prefix"
+      status     = "Enabled"
+      transition = [{ days = var.archive_object_transition_days, storage_class = "GLACIER_IR" }]
+    }] : [],
+    var.archive_object_transition_days > 0 ?
+    [{
+      filter     = { and = { tags = { "lifecycle" = "archive" }, object_size_greater_than = 131071 } }
+      id         = "Online archive objects tagged lifecycle=archive"
+      status     = "Enabled"
+      transition = [{ days = var.archive_object_transition_days, storage_class = "GLACIER_IR" }]
+    }] : []
+  )
 
-  name_suffix  = var.name_uniqueness == true ? "-${random_id.name_suffix[0].hex}" : ""
-  applied_name = "${var.name_prefix}${var.name}${local.name_suffix}"
-  # If versioning is disabled (suspended), add backup=exclude tag. AWS backup fails if versioning is not enabled.
-  backup_status = var.object_versioning_status == "Suspended" ? { "hh:backup" = "exclude" } : null
-  # If hh:phi tag is explicitely entered as false, add tag, if not default to hh:phi=true
-  phi_status = module.label.phi == "false" ? { "hh:phi" = "false" } : { "hh:phi" = "true" }
-  # Combine var.tags for backwards compatability, module.label.tags, and backup tag if needed
-  applied_tags = merge(module.label.tags, local.backup_status, local.phi_status, var.tags)
+  name_suffix  = var.name_uniqueness == true ? "-${random_id.name_suffix[0].hex}" : ""
+  applied_name = "${var.name_prefix}${var.name}${local.name_suffix}"
+  # If versioning is disabled (suspended), add backup=exclude tag. AWS backup fails if versioning is not enabled.
+  backup_status = var.object_versioning_status == "Suspended" ? { "hh:backup" = "exclude" } : null
+  # If hh:phi tag is explicitely entered as false, add tag, if not default to hh:phi=true
+  phi_status = module.label.phi == "false" ? { "hh:phi" = "false" } : { "hh:phi" = "true" }
+  # Combine var.tags for backwards compatability, module.label.tags, and backup tag if needed
+  applied_tags = merge(module.label.tags, local.backup_status, local.phi_status, var.tags)
 
-  # Transform replication_configuration for v3 module format (without role, role will be computed in module call)
-  replication_configuration_rules = var.replication_configuration != null ? [for rule in var.replication_configuration.rules : {
-    id                               = rule.id
-    status                           = rule.status
-    priority                         = rule.priority
-    delete_marker_replication_status = rule.delete_marker_replication_status
-    destinations = [for dest in rule.destinations : {
-      bucket        = dest.bucket_arn
-      storage_class = dest.storage_class
-      account       = dest.account_id
-      access_control_translation = dest.access_control_translation != null ? {
-        owner = dest.access_control_translation.owner
-      } : null
-      encryption_configuration = dest.encryption_configuration != null ? {
-        replica_kms_key_id = dest.encryption_configuration.replica_kms_key_id
-      } : null
-      metrics = dest.metrics != null ? {
-        status = dest.metrics.status
-        event_threshold = {
-          minutes = dest.metrics.event_threshold_minutes
-        }
-      } : null
-      replication_time = dest.replication_time != null ? {
-        status = dest.replication_time.status
-        time = {
-          minutes = dest.replication_time.time_minutes
-        }
-      } : null
-    }]
-    filter = rule.filter != null ? {
-      prefix = rule.filter.prefix
-      tag = rule.filter.tag != null ? {
-        key   = rule.filter.tag.key
-        value = rule.filter.tag.value
-      } : null
-      and = rule.filter.and != null ? {
-        prefix = rule.filter.and.prefix
-        tags   = rule.filter.and.tags
-      } : null
-    } : null
-    source_selection_criteria = rule.source_selection_criteria != null ? {
-      sse_kms_encrypted_objects = rule.source_selection_criteria.sse_kms_encrypted_objects != null ? {
-        status = rule.source_selection_criteria.sse_kms_encrypted_objects.status
-      } : null
-      replica_modifications = rule.source_selection_criteria.replica_modifications != null ? {
-        status = rule.source_selection_criteria.replica_modifications.status
-      } : null
-    } : null
-    existing_object_replication = rule.existing_object_replication != null ? {
-      status = rule.existing_object_replication.status
-    } : null
-  }] : []
+  # (Your existing replication_configuration_rules logic remains unchanged)
+  replication_configuration_rules = var.replication_configuration != null ? [for rule in var.replication_configuration.rules : {
+    id                               = rule.id
+    status                           = rule.status
+    priority                         = rule.priority
+    delete_marker_replication_status = rule.delete_marker_replication_status
+    destinations = [for dest in rule.destinations : {
+      bucket      = dest.bucket_arn
+      storage_class = dest.storage_class
+      account     = dest.account_id
+      access_control_translation = dest.access_control_translation != null ? {
+        owner = dest.access_control_translation.owner
+      } : null
+      encryption_configuration = dest.encryption_configuration != null ? {
+        replica_kms_key_id = dest.encryption_configuration.replica_kms_key_id
+      } : null
+      metrics = dest.metrics != null ? {
+        status = dest.metrics.status
+        event_threshold = {
+          minutes = dest.metrics.event_threshold_minutes
+        }
+      } : null
+      replication_time = dest.replication_time != null ? {
+        status = dest.replication_time.status
+        time = {
+          minutes = dest.replication_time.time_minutes
+        }
+      } : null
+    }]
+    filter = rule.filter != null ? {
+      prefix = rule.filter.prefix
+      tag = rule.filter.tag != null ? {
+        key   = rule.filter.tag.key
+        value = rule.filter.tag.value
+      } : null
+      and = rule.filter.and != null ? {
+        prefix = rule.filter.and.prefix
+        tags   = rule.filter.and.tags
+      } : null
+    } : null
+    source_selection_criteria = rule.source_selection_criteria != null ? {
+      sse_kms_encrypted_objects = rule.source_selection_criteria.sse_kms_encrypted_objects != null ? {
+        status = rule.source_selection_criteria.sse_kms_encrypted_objects.status
+      } : null
+      replica_modifications = rule.source_selection_criteria.replica_modifications != null ? {
+        status = rule.source_selection_criteria.replica_modifications.status
+      } : null
+    } : null
+    existing_object_replication = rule.existing_object_replication != null ? {
+      status = rule.existing_object_replication.status
+    } : null
+  }] : []
 }
 
 # --- RESOURCES ---
 
 resource "random_id" "name_suffix" {
-  count       = var.name_uniqueness == true ? 1 : 0
-  byte_length = 4
+  count         = var.name_uniqueness == true ? 1 : 0
+  byte_length = 4
 }
 
 module "label" {
-  source = "github.com/hinge-health-terraform/hh_label?ref=v1"
+  source = "github.com/hinge-health-terraform/hh_label?ref=v1"
 
-  namespace = "hh"
-  component = "s3_bucket"
+  namespace = "hh"
+  component = "s3_bucket"
 
-  context = var.context
+  context = var.context
 }
 
 module "this" {
-  source = "github.com/terraform-aws-modules/terraform-aws-s3-bucket?ref=v3.15.0"
+  source = "github.com/terraform-aws-modules/terraform-aws-s3-bucket?ref=v3.15.0"
 
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        kms_master_key_id = var.kms_master_key_id
-        sse_algorithm     = var.kms_master_key_id == null ? "AES256" : "aws:kms"
-      }
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = var.kms_master_key_id
+        sse_algorithm     = var.kms_master_key_id == null ? "AES256" : "aws:kms"
+      }
 
-      bucket_key_enabled = var.kms_master_key_id == null ? false : true
-    }
-  }
-  object_lock_enabled = var.object_lock_enabled
-  object_lock_configuration = var.object_lock_enabled == true ? {
-    default_retention_period = var.object_lock_default_retention_period
-    default_retention_units  = var.object_lock_default_retention_units
-  } : null
-  versioning = {
-    enabled = var.object_versioning_status == "Enabled"
-  }
-  logging = var.access_log_bucket != null ? {
-    target_bucket = var.access_log_bucket
-    target_prefix = "${var.name}/"
-  } : {}
-  control_object_ownership = true
-  object_ownership         = var.object_ownership
-  block_public_acls        = var.private
-  block_public_policy      = var.private
-  ignore_public_acls       = var.private
-  restrict_public_buckets  = var.private
-  bucket                   = local.applied_name
-  tags                     = local.applied_tags
-  force_destroy            = var.force_destroy
-  attach_policy            = length(var.policy) > 0 ? true : false
-  policy                   = length(var.policy) > 0 ? var.policy : null
-  acl                      = var.object_ownership == "BucketOwnerEnforced" ? null : (var.acl == "null" ? null : var.acl)
-  lifecycle_rule           = local.effective_lifecycle_rules
-  metric_configuration     = length(var.bucket_metrics_filters) > 0 ? [for k, v in var.bucket_metrics_filters : { name = k, prefix = v.prefix }] : []
+      bucket_key_enabled = var.kms_master_key_id == null ? false : true
+    }
+  }
+  object_lock_enabled = var.object_lock_enabled
+  object_lock_configuration = var.object_lock_enabled == true ? {
+    default_retention_period = var.object_lock_default_retention_period
+    default_retention_units  = var.object_lock_default_retention_units
+  } : null
+  
+  # --- UPDATED: Use MIRRORED Versioning Status ---
+  versioning = {
+    enabled = var.mirrored_versioning_status == "Enabled"
+  }
+  
+  logging = var.access_log_bucket != null ? {
+    target_bucket = var.access_log_bucket
+    target_prefix = "${var.name}/"
+  } : {}
+  control_object_ownership = true
+  object_ownership         = var.object_ownership
+  
+  # --- UPDATED: Use MIRRORED PAB status as a fallback if 'private' is not set ---
+  # Note: The actual PAB resource is added below. This sets the base property.
+  block_public_acls        = var.private ? true : var.mirrored_pab_config.block_public_acls
+  block_public_policy      = var.private ? true : var.mirrored_pab_config.block_public_policy
+  ignore_public_acls       = var.private ? true : var.mirrored_pab_config.ignore_public_acls
+  restrict_public_buckets  = var.private ? true : var.mirrored_pab_config.restrict_public_buckets
+  
+  bucket                   = local.applied_name
+  tags                     = local.applied_tags
+  force_destroy            = var.force_destroy
+  attach_policy            = length(var.policy) > 0 ? true : false
+  policy                   = length(var.policy) > 0 ? var.policy : null
+  
+  # --- UPDATED: Use MIRRORED ACL status ---
+  acl                      = var.object_ownership == "BucketOwnerEnforced" ? null : (var.mirrored_acl == "null" ? null : var.mirrored_acl)
+  
+  lifecycle_rule           = local.effective_lifecycle_rules
+  metric_configuration     = length(var.bucket_metrics_filters) > 0 ? [for k, v in var.bucket_metrics_filters : { name = k, prefix = v.prefix }] : []
+}
+
+# --- NEW: Public Access Block Resource (moved from root.tf) ---
+# This resource applies the exact PAB configuration mirrored from the primary bucket.
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket = module.this.s3_bucket_id
+  
+  block_public_acls       = var.mirrored_pab_config.block_public_acls
+  block_public_policy     = var.mirrored_pab_config.block_public_policy
+  ignore_public_acls      = var.mirrored_pab_config.ignore_public_acls
+  restrict_public_buckets = var.mirrored_pab_config.restrict_public_buckets
 }
 
 resource "aws_s3_bucket_replication_configuration" "this" {
