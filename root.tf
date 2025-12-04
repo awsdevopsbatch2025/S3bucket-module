@@ -64,12 +64,28 @@ module "dr_s3_setup" {
   context                = module.bucket_label.context
   name                   = each.value.dr_bucket_name
   
-  # --- REFLECTED PROPERTIES from Primary Bucket ---
-  # Reflect the ACL (e.g., private, public-read)
-  acl = data.aws_s3_bucket_acl.primary_acl[each.key].acl
+  # ------------------------------------------------------------------
+  # --- UPDATED: Passing Mirroring Data using new module variables ---
+  # ------------------------------------------------------------------
   
-  # Reflect the Versioning Status
-  object_versioning_status = data.aws_s3_bucket.primary_properties[each.key].versioning[0].status 
+  # Pass the primary bucket's ACL value to the new mirroring variable
+  mirrored_acl = data.aws_s3_bucket_acl.primary_acl[each.key].acl
+  
+  # Pass the primary bucket's Versioning Status to the new mirroring variable
+  mirrored_versioning_status = data.aws_s3_bucket.primary_properties[each.key].versioning[0].status 
+  
+  # Pass the entire PAB configuration as an object to the new mirroring variable
+  mirrored_pab_config = {
+    block_public_acls       = data.aws_s3_bucket_public_access_block.primary_pab[each.key].block_public_acls
+    block_public_policy     = data.aws_s3_bucket_public_access_block.primary_pab[each.key].block_public_policy
+    ignore_public_acls      = data.aws_s3_bucket_public_access_block.primary_pab[each.key].ignore_public_acls
+    restrict_public_buckets = data.aws_s3_bucket_public_access_block.primary_pab[each.key].restrict_public_buckets
+  }
+
+  # NOTE: The native 'acl' and 'object_versioning_status' inputs 
+  # are now omitted/removed here, as they are superseded by the 'mirrored_' variables.
+  
+  # ------------------------------------------------------------------
   
   # Reflect website configuration (using try() to handle cases where it's not set on primary)
   website_configuration = try(
@@ -84,9 +100,9 @@ module "dr_s3_setup" {
   # --- CRR to Primary (Failback Configuration on DR Bucket) ---
   replication_configuration = {
     rules = [{
-      id                             = "ReplicateToSourceBucket"
-      status                         = "Enabled"
-      priority                       = 1
+      id                               = "ReplicateToSourceBucket"
+      status                           = "Enabled"
+      priority                         = 1
       delete_marker_replication_status = "Enabled"
       destinations = [{
         bucket_arn    = data.aws_s3_bucket_arn.primary[each.key].arn 
@@ -98,8 +114,8 @@ module "dr_s3_setup" {
 
   # Dynamic IAM Role/Policy Naming
   replication_iam = {
-    role_name               = "${each.value.dr_bucket_name}-s3-replication-role"
-    policy_name             = "${each.value.dr_bucket_name}-s3-replication-policy"
+    role_name              = "${each.value.dr_bucket_name}-s3-replication-role"
+    policy_name            = "${each.value.dr_bucket_name}-s3-replication-policy"
     destination_bucket_arns = [
       data.aws_s3_bucket_arn.primary[each.key].arn,
       "arn:aws:s3:::${each.value.dr_bucket_name}"
@@ -110,25 +126,25 @@ module "dr_s3_setup" {
   mrap_name = "${each.key}-mrap"
   mrap_regions = [
     {
-      region                  = each.value.primary_region
-      bucket_arn              = data.aws_s3_bucket_arn.primary[each.key].arn
-      bucket_name             = each.value.primary_bucket_name
+      region                = each.value.primary_region
+      bucket_arn            = data.aws_s3_bucket_arn.primary[each.key].arn
+      bucket_name           = each.value.primary_bucket_name
       traffic_dial_percentage = 100
     },
     {
-      region                  = each.value.dr_region
-      bucket_arn              = module.dr_s3_setup[each.key].bucket_arn
-      bucket_name             = each.value.dr_bucket_name
+      region                = each.value.dr_region
+      bucket_arn            = module.dr_s3_setup[each.key].bucket_arn
+      bucket_name           = each.value.dr_bucket_name
       traffic_dial_percentage = 0
     }
   ]
   # --- ACTIVE/PASSIVE MRAP CONFIGURATION END ---
 
   mrap_iam = {
-    role_name        = "${each.key}-mrap-role"
-    policy_name      = "${each.key}-mrap-policy"
-    bucket_arns      = [data.aws_s3_bucket_arn.primary[each.key].arn, module.dr_s3_setup[each.key].bucket_arn]
-    policy_path      = "/"
+    role_name          = "${each.key}-mrap-role"
+    policy_name        = "${each.key}-mrap-policy"
+    bucket_arns        = [data.aws_s3_bucket_arn.primary[each.key].arn, module.dr_s3_setup[each.key].bucket_arn]
+    policy_path        = "/"
     policy_description = "IAM policy for Multi-Region Access Point to access ${each.value.primary_bucket_name} and ${each.value.dr_bucket_name}"
   }
 }
@@ -136,8 +152,9 @@ module "dr_s3_setup" {
 # --------------------------------------------------------------------------------------------------
 
 ## 4. Public Access Block Configuration (Looped)
-# This block applies the Public Access Block settings, mirroring the primary bucket's security.
-
+# This resource is no longer needed as the PAB configuration is handled
+# inside the 'module.dr_s3_setup' using the 'mirrored_pab_config' input.
+/*
 resource "aws_s3_bucket_public_access_block" "dr_pab" {
   for_each = local.dr_bucket_configurations
   
@@ -152,6 +169,7 @@ resource "aws_s3_bucket_public_access_block" "dr_pab" {
   ignore_public_acls      = data.aws_s3_bucket_public_access_block.primary_pab[each.key].ignore_public_acls
   restrict_public_buckets = data.aws_s3_bucket_public_access_block.primary_pab[each.key].restrict_public_buckets
 }
+*/
 
 # --------------------------------------------------------------------------------------------------
 
@@ -174,7 +192,7 @@ resource "aws_s3_bucket_replication_configuration" "primary_to_dr" {
     priority = 1
     
     destination {
-      bucket = module.dr_s3_setup[each.key].bucket_arn
+      bucket = module.dr_s3_setup[each.key].arn # Use the module output for ARN
     }
   }
 }
