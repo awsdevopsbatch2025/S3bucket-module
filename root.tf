@@ -146,7 +146,7 @@ module "dr_s3_setup" {
 }
 
 
-## 4. CRR Configuration on Existing Primary Bucket (Looped)
+## 4. CRR Configuration on Existing Primary Bucket 
 # This block configures the Primary bucket to replicate data to the new DR bucket.
 
 resource "aws_s3_bucket_replication_configuration" "primary_to_dr" {
