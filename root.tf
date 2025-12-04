@@ -62,7 +62,7 @@ module "dr_s3_setup" {
   name                   = each.value.dr_bucket_name
   
   # ------------------------------------------------------------------
-  # --- UPDATED: Passing Mirroring Data using new module variables ---
+  # --- Passing Mirroring Data using new module variables ---
   # ------------------------------------------------------------------
   
   # Pass the primary bucket's ACL value to the new mirroring variable
@@ -79,8 +79,7 @@ module "dr_s3_setup" {
     restrict_public_buckets = data.aws_s3_bucket_public_access_block.primary_pab[each.key].restrict_public_buckets
   }
 
-  # NOTE: The native 'acl' and 'object_versioning_status' inputs 
-  # are now omitted/removed here, as they are superseded by the 'mirrored_' variables.
+ 
   
   # ------------------------------------------------------------------
   
