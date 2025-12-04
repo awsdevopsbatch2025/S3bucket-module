@@ -11,9 +11,6 @@ provider "aws" {
   region = "us-east-2"
 }
 
-# Assume 'module.bucket_label' is defined elsewhere and is singular.
-
-# --------------------------------------------------------------------------------------------------
 
 ## 2. Data Sources (Look up existing Primary Bucket Properties)
 # These blocks fetch the current configuration of the existing production buckets.
