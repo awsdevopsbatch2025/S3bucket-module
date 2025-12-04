@@ -145,31 +145,8 @@ module "dr_s3_setup" {
   }
 }
 
-# --------------------------------------------------------------------------------------------------
 
-## 4. Public Access Block Configuration (Looped)
-# This resource is no longer needed as the PAB configuration is handled
-# inside the 'module.dr_s3_setup' using the 'mirrored_pab_config' input.
-/*
-resource "aws_s3_bucket_public_access_block" "dr_pab" {
-  for_each = local.dr_bucket_configurations
-  
-  # Resource must run in the DR region (us-east-2)
-  provider = aws.us-east-2
-  
-  bucket = module.dr_s3_setup[each.key].bucket_id
-
-  # Reflect all Public Access Block settings from the Primary bucket
-  block_public_acls       = data.aws_s3_bucket_public_access_block.primary_pab[each.key].block_public_acls
-  block_public_policy     = data.aws_s3_bucket_public_access_block.primary_pab[each.key].block_public_policy
-  ignore_public_acls      = data.aws_s3_bucket_public_access_block.primary_pab[each.key].ignore_public_acls
-  restrict_public_buckets = data.aws_s3_bucket_public_access_block.primary_pab[each.key].restrict_public_buckets
-}
-*/
-
-# --------------------------------------------------------------------------------------------------
-
-## 5. CRR Configuration on Existing Primary Bucket (Looped)
+## 4. CRR Configuration on Existing Primary Bucket (Looped)
 # This block configures the Primary bucket to replicate data to the new DR bucket.
 
 resource "aws_s3_bucket_replication_configuration" "primary_to_dr" {
