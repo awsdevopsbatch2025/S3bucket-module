@@ -221,3 +221,37 @@ variable "mrap_iam" {
   type        = any # Using 'any' for complex IAM structures
   default     = null
 }
+
+# --------------------------------------------------------------------------------
+# --- DR / PERMISSION MIRRORING CONFIGURATION ---
+# --------------------------------------------------------------------------------
+
+variable "mirrored_acl" {
+  description = "The canned ACL of the primary bucket to be mirrored (e.g., 'private'). This overrides the standard 'acl' variable if set."
+  type        = string
+  default     = null # Set to null to make it optional, allowing the root to pass `null` if the data source fails to retrieve it or if not mirroring is intended.
+}
+
+variable "mirrored_versioning_status" {
+  description = "The versioning status ('Enabled' or 'Suspended') of the primary bucket to be mirrored. This is used instead of 'object_versioning_status' for DR buckets."
+  type        = string
+  default     = "Enabled" # Default to 'Enabled' if not explicitly passed, though passing the source status is highly recommended.
+}
+
+variable "mirrored_pab_config" {
+  description = "Public Access Block configuration (block_public_acls, etc.) fetched from the primary bucket to be mirrored."
+  type = object({
+    block_public_acls       = bool
+    block_public_policy     = bool
+    ignore_public_acls      = bool
+    restrict_public_buckets = bool
+  })
+  # Set defaults to false to match the API expectation if no configuration is found, 
+  # though the root should always pass the full object.
+  default = {
+    block_public_acls       = false
+    block_public_policy     = false
+    ignore_public_acls      = false
+    restrict_public_buckets = false
+  }
+}
