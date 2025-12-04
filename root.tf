@@ -1,5 +1,4 @@
 ## 1. AWS Provider Configuration (Define Regions)
-# These providers are necessary for the for_each loops to deploy resources across us-east-1 and us-east-2.
 
 provider "aws" {
   alias  = "us-east-1"
@@ -13,7 +12,6 @@ provider "aws" {
 
 
 ## 2. Data Sources (Look up existing Primary Bucket Properties)
-# These blocks fetch the current configuration of the existing production buckets.
 
 # Look up the ARN for all existing Primary buckets
 data "aws_s3_bucket_arn" "primary" {
@@ -63,6 +61,8 @@ module "dr_s3_setup" {
   
   # ------------------------------------------------------------------
   # --- Passing Mirroring Data using new module variables ---
+  # These inputs trigger the module to create the ACL, Versioning, 
+  # and Public Access Block based on the primary bucket's configuration.
   # ------------------------------------------------------------------
   
   # Pass the primary bucket's ACL value to the new mirroring variable
@@ -79,8 +79,6 @@ module "dr_s3_setup" {
     restrict_public_buckets = data.aws_s3_bucket_public_access_block.primary_pab[each.key].restrict_public_buckets
   }
 
- 
-  
   # ------------------------------------------------------------------
   
   # Reflect website configuration (using try() to handle cases where it's not set on primary)
@@ -110,8 +108,8 @@ module "dr_s3_setup" {
 
   # Dynamic IAM Role/Policy Naming
   replication_iam = {
-    role_name              = "${each.value.dr_bucket_name}-s3-replication-role"
-    policy_name            = "${each.value.dr_bucket_name}-s3-replication-policy"
+    role_name               = "${each.value.dr_bucket_name}-s3-replication-role"
+    policy_name             = "${each.value.dr_bucket_name}-s3-replication-policy"
     destination_bucket_arns = [
       data.aws_s3_bucket_arn.primary[each.key].arn,
       "arn:aws:s3:::${each.value.dr_bucket_name}"
@@ -165,7 +163,8 @@ resource "aws_s3_bucket_replication_configuration" "primary_to_dr" {
     priority = 1
     
     destination {
-      bucket = module.dr_s3_setup[each.key].arn # Use the module output for ARN
+      # Ensure this is the ARN output from the module
+      bucket = module.dr_s3_setup[each.key].arn 
     }
   }
 }
